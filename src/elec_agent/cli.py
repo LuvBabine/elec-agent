@@ -18,7 +18,6 @@ console = Console()
 @app.command()
 def analyze(
     schematic: str = typer.Argument(
-        "",
         help="Path to schematic image or PDF file"
     ),
     config: str = typer.Option(
@@ -42,10 +41,6 @@ def analyze(
     Example:
         elec-agent analyze schema.png --output rapport.pdf -v
     """
-    if schematic == "":
-        console.print("[red]Error:[/red] Please provide a schematic file path")
-        raise typer.Exit(1)
-
     schematic_path = Path(schematic)
 
     console.print(Panel(
