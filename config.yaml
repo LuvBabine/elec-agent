@@ -1,12 +1,12 @@
 llm:
-  provider: ollama          # ollama | openai | anthropic
-  model: llama3.2-vision    # vision-capable model required for image input
-  api_key: null             # required for openai/anthropic
+  provider: ollama
+  model: llava
+  api_key: null
 
 rules:
   standard: NFC15100
-  strictness: normal        # normal | strict
+  strictness: normal
 
 output:
-  format: pdf               # pdf | txt | json
-  language: fr              # fr | en
+  format: pdf
+  language: fr
