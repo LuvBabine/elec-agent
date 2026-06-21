@@ -17,11 +17,11 @@ Nobody covers **industrial/residential wiring schematics**: distribution boards,
 
 ## Features
 
-- 📷 **Image input** — drop a schematic photo or PDF scan
-- 🔍 **LLM component extraction** — identifies breakers, cables, loads, protection devices
-- 📏 **NF C 15-100 rule engine** — checks breaker ratings, cable sections, differential protection
-- 📉 **Voltage drop calculator** — flags cables where ΔU > 3% (lighting) or 5% (power)
-- 📄 **PDF report output** — errors ranked by severity + correction suggestions + BOM
+- **Image input** — drop a schematic photo or PDF scan
+- **LLM component extraction** — identifies breakers, cables, loads, protection devices
+- **NF C 15-100 rule engine** — checks breaker ratings, cable sections, differential protection
+- **Voltage drop calculator** — flags cables where ΔU > 3% (lighting) or 5% (power)
+- **PDF report output** — errors ranked by severity + correction suggestions + BOM
 
 ---
 
