@@ -1,0 +1,91 @@
+{
+  "_comment": "NF C 15-100 rules database — elec-agent v0.1",
+  "breaker_cable_coordination": {
+    "description": "Section minimale du câble selon calibre disjoncteur (NF C 15-100 §523)",
+    "table": [
+      {
+        "max_breaker_A": 10,
+        "min_section_mm2": 1.5
+      },
+      {
+        "max_breaker_A": 16,
+        "min_section_mm2": 1.5
+      },
+      {
+        "max_breaker_A": 20,
+        "min_section_mm2": 2.5
+      },
+      {
+        "max_breaker_A": 25,
+        "min_section_mm2": 2.5
+      },
+      {
+        "max_breaker_A": 32,
+        "min_section_mm2": 4.0
+      },
+      {
+        "max_breaker_A": 40,
+        "min_section_mm2": 6.0
+      },
+      {
+        "max_breaker_A": 50,
+        "min_section_mm2": 10.0
+      },
+      {
+        "max_breaker_A": 63,
+        "min_section_mm2": 16.0
+      },
+      {
+        "max_breaker_A": 80,
+        "min_section_mm2": 25.0
+      },
+      {
+        "max_breaker_A": 100,
+        "min_section_mm2": 35.0
+      },
+      {
+        "max_breaker_A": 125,
+        "min_section_mm2": 50.0
+      }
+    ]
+  },
+  "differential_protection": {
+    "description": "Chaque circuit doit être protégé par un différentiel (NF C 15-100 §531)",
+    "mandatory_for": [
+      "socket",
+      "lighting",
+      "motor"
+    ],
+    "sensitivity_mA": {
+      "bathroom_zone1_2": 10,
+      "outdoor": 30,
+      "indoor_general": 30
+    }
+  },
+  "voltage_drop": {
+    "description": "Chute de tension maximale (NF C 15-100 §525)",
+    "max_percent_lighting": 3.0,
+    "max_percent_power": 5.0,
+    "copper_resistivity_ohm_mm2_per_m": 0.01786
+  },
+  "socket_circuits": {
+    "description": "Nombre max de prises par circuit (NF C 15-100 §771)",
+    "max_sockets_per_16A_circuit": 8,
+    "max_sockets_per_20A_circuit": 12
+  },
+  "lighting_circuits": {
+    "description": "Puissance max par circuit éclairage (NF C 15-100 §771)",
+    "max_power_W_per_10A_circuit": 2300,
+    "max_power_W_per_16A_circuit": 3680
+  },
+  "minimum_circuits_residential": {
+    "description": "Circuits minimaux obligatoires logement (NF C 15-100 §771.53)",
+    "required": [
+      "1x circuit éclairage minimum par pièce principale",
+      "1x circuit 20A cuisine/salle de bain",
+      "1x circuit 32A lave-linge",
+      "1x circuit 32A ou 20A plaques de cuisson selon puissance",
+      "1x circuit éclairage extérieur si jardin"
+    ]
+  }
+}
