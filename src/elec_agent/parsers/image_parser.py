@@ -56,17 +56,17 @@ Be exhaustive — list every component you see.
 class ImageParser:
     """
     Vision LLM parser for electrical schematics.
-
+    
     Supports:
         - Image files (PNG, JPG, JPEG)
         - PDF scans (extracts first page as image)
         - LLM providers: Ollama (local), OpenAI, Anthropic
     """
-
+    
     def __init__(self, llm_config: dict):
         """
         Initialize parser with LLM configuration.
-
+        
         Args:
             llm_config: Dict with keys:
                 - provider: "ollama" | "openai" | "anthropic"
@@ -80,10 +80,10 @@ class ImageParser:
     def parse(self, path: Path) -> list[dict]:
         """
         Main parsing method.
-
+        
         Args:
             path: Path to schematic file (image or PDF)
-
+            
         Returns:
             List of extracted component dictionaries
         """
@@ -94,15 +94,15 @@ class ImageParser:
     def _load_image(self, path: Path) -> bytes:
         """
         Load image from file (PNG/JPG) or extract from PDF.
-
+        
         Args:
             path: File path
-
+            
         Returns:
             Image bytes as PNG
         """
         suffix = path.suffix.lower()
-
+        
         if suffix == ".pdf":
             # Extract first page from PDF as image
             with pdfplumber.open(path) as pdf:
@@ -121,10 +121,10 @@ class ImageParser:
     def _call_llm(self, image_bytes: bytes) -> str:
         """
         Call vision LLM with image and prompt.
-
+        
         Args:
             image_bytes: Image as PNG bytes
-
+            
         Returns:
             Raw LLM response (JSON string)
         """
@@ -140,7 +140,7 @@ class ImageParser:
     def _call_ollama(self, image_bytes: bytes) -> str:
         """
         Call Ollama local server (free, no API key).
-
+        
         Requires:
             - Ollama installed: https://ollama.com
             - Model pulled: ollama pull llama3.2-vision
@@ -160,7 +160,7 @@ class ImageParser:
     def _call_openai(self, image_bytes: bytes) -> str:
         """
         Call OpenAI API (GPT-4 with vision).
-
+        
         Requires:
             - API key from: https://platform.openai.com
         """
@@ -183,7 +183,7 @@ class ImageParser:
     def _call_anthropic(self, image_bytes: bytes) -> str:
         """
         Call Anthropic API (Claude with vision).
-
+        
         Requires:
             - API key from: https://console.anthropic.com
         """
@@ -206,19 +206,17 @@ class ImageParser:
     def _parse_response(self, raw: str) -> list[dict]:
         """
         Extract JSON from raw LLM response.
-
+        
         Args:
             raw: Raw LLM output (may include text before/after JSON)
-
+            
         Returns:
             List of components from JSON
         """
         # Find JSON object in response (LLM may add chatter)
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         if not match:
-            raise ValueError(f"LLM did not return valid JSON.
-Raw output:
-{raw}")
-
+            raise ValueError(f"LLM did not return valid JSON.\nRaw output:\n{raw}")
+        
         data = json.loads(match.group())
         return data.get("components", [])
