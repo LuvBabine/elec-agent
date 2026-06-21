@@ -1,46 +1,63 @@
 # ⚡ elec-agent CLI
 # Usage: elec-agent analyze <schematic.png> --output rapport.pdf -v
 
-import click
+import typer
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from .agent import ElecAgent
 
+app = typer.Typer(
+    name="elec-agent",
+    help="Autonomous NF C 15-100 electrical schematic analyzer.",
+    add_completion=False,
+)
 console = Console()
 
 
-@click.group()
-def app():
-    """elec-agent — Autonomous NF C 15-100 electrical schematic analyzer."""
-    pass
-
-
 @app.command()
-@click.argument("schematic", type=click.Path(exists=True))
-@click.option("--config", "-c", default="config.yaml", help="Configuration file path")
-@click.option("--output", "-o", default="rapport.pdf", help="Output PDF report path")
-@click.option("--verbose", "-v", is_flag=True, help="Show detailed error messages")
-def analyze(schematic, config, output, verbose):
+def analyze(
+    schematic: Path = typer.Argument(
+        ...,
+        help="Path to schematic image or PDF file"
+    ),
+    config: Path = typer.Option(
+        "config.yaml",
+        help="Configuration file path (LLM settings, rules, output format)"
+    ),
+    output: Path = typer.Option(
+        "rapport.pdf",
+        help="Output PDF report path"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Show detailed error messages"
+    ),
+):
     """
     Analyze an electrical schematic for NF C 15-100 compliance.
-    
+
     Example:
         elec-agent analyze schema.png --output rapport.pdf -v
     """
-    schematic_path = Path(schematic)
-
     console.print(Panel(
         "[bold yellow]⚡ elec-agent[/bold yellow] — NF C 15-100 Compliance Check",
         expand=False
     ))
 
+    # Validate input file exists
+    if not schematic.exists():
+        console.print(f"[red]Error:[/red] file not found: {schematic}")
+        raise typer.Exit(1)
+
     # Initialize agent with config
-    agent = ElecAgent(config_path=Path(config), verbose=verbose)
+    agent = ElecAgent(config_path=config, verbose=verbose)
 
     # Step 1: Extract components using vision LLM
     with console.status("[bold green]Extracting components via vision LLM...[/bold green]"):
-        components = agent.extract_components(schematic_path)
+        components = agent.extract_components(schematic)
 
     console.print(f"[green]✓[/green] {len(components)} components detected")
 
@@ -62,7 +79,7 @@ def analyze(schematic, config, output, verbose):
 
     # Step 3: Generate PDF report
     with console.status("[bold green]Generating PDF report...[/bold green]"):
-        agent.generate_report(components, issues, Path(output))
+        agent.generate_report(components, issues, output)
 
     console.print(f"[bold green]✓ Report generated:[/bold green] {output}")
 

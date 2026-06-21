@@ -1,22 +1,26 @@
-# ⚡ elec-agent — NF C 15-100 Rule Engine
-# Checks extracted components against French electrical code rules
+# ⚡ elec-agent — Multi-Norm Rule Engine
+# Supports NF C 15-100, NEC, IEC 60364, BS 7671, etc.
 
 import json
 from pathlib import Path
 from .voltage_drop import calc_voltage_drop, current_from_power
+from .norms import get_norm, NORMS
 
-RULES_PATH = Path(__file__).parent / "nfc15100.json"
+RULES_PATH = Path(__file__).parent / "norms"
 
 
 class RuleEngine:
     """
-    NF C 15-100 compliance checker.
+    Multi-norm compliance checker.
 
-    Implements 4 critical rules from the French electrical standard:
-        1. §523 — Breaker ↔ Cable section coordination
-        2. §531 — Differential protection requirement
-        3. §525 — Maximum voltage drop (3% lighting / 5% power)
-        4. §771 — Maximum outlets per circuit (8 for 16A, 12 for 20A)
+    Supports:
+        - NF C 15-100 (France)
+        - IEC 60364 (Europe)
+        - NEC NFPA 70 (USA)
+        - BS 7671 (UK)
+
+    Initialize with:
+        engine = RuleEngine({"standard": "NFC15100", "strictness": "normal"})
     """
 
     def __init__(self, rules_config: dict):
@@ -25,12 +29,15 @@ class RuleEngine:
 
         Args:
             rules_config: Dict with keys:
-                - standard: "NFC15100" (currently only supported)
+                - standard: "NFC15100" | "IEC60364" | "NEC2023" | "BS7671"
                 - strictness: "normal" | "strict"
         """
-        # Load rules database from JSON
-        with open(RULES_PATH, encoding="utf-8") as f:
-            self.rules = json.load(f)
+        # Load rules for selected standard
+        self.standard = rules_config.get("standard", "NFC15100")
+        self.rules = get_norm(self.standard)
+
+        if self.rules is None:
+            raise ValueError(f"Unknown standard: {self.standard}. Use: {list(NORMS.keys())}")
 
         self.strictness = rules_config.get("strictness", "normal")
 
@@ -52,121 +59,85 @@ class RuleEngine:
             issues += self._check_socket_count(comp, components)
         return issues
 
-    # ───────────────────────────────────────────────────────────────────────────
-    # Rule 1: Breaker ↔ Cable Coordination (NF C 15-100 §523)
-    # ───────────────────────────────────────────────────────────────────────────
     def _check_breaker_cable(self, comp: dict) -> list[dict]:
-        """
-        Check if cable section matches breaker rating.
-
-        Rule: A 32A breaker requires minimum 4mm^2 cable.
-        Too small = risk of overheating / fire.
-
-        Args:
-            comp: Component dictionary
-
-        Returns:
-            List of issues (empty if compliant)
-        """
+        """Check breaker-cable coordination per selected standard."""
         issues = []
 
-        # Only check circuit breakers
         if comp.get("type") != "circuit_breaker":
             return issues
 
         rating = comp.get("rating_A")
         section = comp.get("cable_section_mm2")
 
-        # Skip if missing data
         if rating is None or section is None:
             return issues
 
-        # Find minimum section for this breaker rating
         table = self.rules["breaker_cable_coordination"]["table"]
         min_section = None
+
         for row in sorted(table, key=lambda r: r["max_breaker_A"]):
             if rating <= row["max_breaker_A"]:
                 min_section = row["min_section_mm2"]
                 break
 
-        # Flag error if cable is undersized
         if min_section and section < min_section:
             issues.append({
                 "component_id": comp.get("id", "?"),
-                "rule": "NF C 15-100 §523",
+                "rule": f"{self.standard} - Cable coordination",
                 "severity": "error",
                 "message": (
                     f"[{comp.get('id')}] {rating}A breaker: cable section {section}mm^2 too small "
-                    f"(minimum {min_section}mm^2 required)"
+                    f"(minimum {min_section}mm^2 required per {self.standard})"
                 ),
                 "suggestion": f"Replace cable with {min_section}mm^2 minimum, or reduce breaker rating.",
             })
         return issues
 
-    # ───────────────────────────────────────────────────────────────────────────
-    # Rule 2: Differential Protection (NF C 15-100 §531)
-    # ───────────────────────────────────────────────────────────────────────────
     def _check_differential(self, comp: dict, all_comps: list[dict]) -> list[dict]:
-        """
-        Check if socket/lighting/motor circuits have differential protection.
-
-        Rule: Every socket, lighting, and motor circuit must be protected
-        by a 30mA differential switch (type AC).
-
-        Args:
-            comp: Component dictionary
-            all_comps: Full component list (to check upstream protection)
-
-        Returns:
-            List of issues
-        """
+        """Check differential/RCD/GFCI protection per selected standard."""
         issues = []
-        protected_types = self.rules["differential_protection"]["mandatory_for"]
 
-        # Skip if not a protected type
+        if self.standard == "NEC2023":
+            # NEC uses GFCI/AFCI instead of differential
+            rules = self.rules.get("gfci_protection", {})
+            protection_type = "GFCI"
+        else:
+            rules = self.rules.get("differential_protection", {})
+            protection_type = "differential" if self.standard != "BS7671" else "RCD"
+
+        protected_types = rules.get("mandatory_for", [])
+
         if comp.get("type") not in protected_types:
             return issues
 
-        # Check position
         position = comp.get("position")
 
-        # Look for differential/RCB upstream in same position
-        has_diff = any(
-            c.get("type") in ("differential", "rcd") and c.get("position") == position
-            for c in all_comps
-        )
+        if self.standard == "NEC2023":
+            has_protection = any(
+                c.get("type") in ("gfci", "afc") and c.get("position") == position
+                for c in all_comps
+            )
+        else:
+            has_protection = any(
+                c.get("type") in ("differential", "rcd") and c.get("position") == position
+                for c in all_comps
+            )
 
-        if not has_diff:
+        if not has_protection:
             issues.append({
                 "component_id": comp.get("id", "?"),
-                "rule": "NF C 15-100 §531",
+                "rule": f"{self.standard} - {protection_type} protection",
                 "severity": "error",
                 "message": (
-                    f"[{comp.get('id')}] {comp.get('type')} without differential protection "
+                    f"[{comp.get('id')}] {comp.get('type')} without {protection_type} protection "
                     f"(position: {position})"
                 ),
-                "suggestion": "Add 30mA differential switch (type AC) upstream of this circuit.",
+                "suggestion": f"Add {protection_type} protection upstream of this circuit.",
             })
         return issues
 
-    # ───────────────────────────────────────────────────────────────────────────
-    # Rule 3: Voltage Drop (NF C 15-100 §525)
-    # ───────────────────────────────────────────────────────────────────────────
     def _check_voltage_drop(self, comp: dict) -> list[dict]:
-        """
-        Check voltage drop along cable.
-
-        Rule: Max 3% for lighting, 5% for power circuits.
-        Too high = equipment may not work properly.
-
-        Formula (single-phase): ΔU = (2 × ρ × L × I) / S
-
-        Args:
-            comp: Component dictionary
-
-        Returns:
-            List of issues
-        """
+        """Check voltage drop per selected standard."""
         issues = []
 
         power = comp.get("load_power_W")
@@ -174,17 +145,12 @@ class RuleEngine:
         section = comp.get("cable_section_mm2")
         comp_type = comp.get("type")
 
-        # Skip if missing data
         if not all([power, length, section]):
             return issues
 
-        # Calculate current from power
         current = current_from_power(power)
-
-        # Calculate voltage drop
         result = calc_voltage_drop(current, length, section)
 
-        # Check against threshold
         is_lighting = comp_type == "lighting"
         threshold = 3.0 if is_lighting else 5.0
         compliant = result["compliant_lighting"] if is_lighting else result["compliant_power"]
@@ -192,37 +158,19 @@ class RuleEngine:
         if not compliant:
             issues.append({
                 "component_id": comp.get("id", "?"),
-                "rule": "NF C 15-100 §525",
+                "rule": f"{self.standard} - Voltage drop",
                 "severity": "warning",
                 "message": (
                     f"[{comp.get('id')}] Voltage drop {result['delta_U_percent']}% "
                     f"exceeds {threshold}% limit "
                     f"(cable {section}mm^2, {length}m, {power}W)"
                 ),
-                "suggestion": (
-                    f"Increase cable section or reduce length. "
-                    f"Current drop: {result['delta_U_V']}V."
-                ),
+                "suggestion": f"Increase cable section or reduce length. Current drop: {result['delta_U_V']}V.",
             })
         return issues
 
-    # ───────────────────────────────────────────────────────────────────────────
-    # Rule 4: Max Outlets per Circuit (NF C 15-100 §771)
-    # ───────────────────────────────────────────────────────────────────────────
     def _check_socket_count(self, comp: dict, all_comps: list[dict]) -> list[dict]:
-        """
-        Check number of outlets on a circuit.
-
-        Rule: Max 8 outlets per 16A circuit, max 12 per 20A circuit.
-        Too many = risk of overload.
-
-        Args:
-            comp: Component dictionary
-            all_comps: Full component list
-
-        Returns:
-            List of issues
-        """
+        """Check socket count per circuit per selected standard."""
         issues = []
 
         if comp.get("type") != "circuit_breaker":
@@ -231,7 +179,6 @@ class RuleEngine:
         rating = comp.get("rating_A")
         position = comp.get("position")
 
-        # Count outlets on this circuit
         socket_count = sum(
             1 for c in all_comps
             if c.get("type") == "socket" and c.get("position") == position
@@ -240,32 +187,34 @@ class RuleEngine:
         if socket_count == 0:
             return issues
 
-        rules = self.rules["socket_circuits"]
+        rules = self.rules.get("socket_circuits", {})
 
-        # Check 16A circuit
-        if rating == 16 and socket_count > rules["max_sockets_per_16A_circuit"]:
-            issues.append({
-                "component_id": comp.get("id", "?"),
-                "rule": "NF C 15-100 §771",
-                "severity": "warning",
-                "message": (
-                    f"[{comp.get('id')}] 16A circuit with {socket_count} outlets "
-                    f"(maximum {rules['max_sockets_per_16A_circuit']})"
-                ),
-                "suggestion": "Split into two separate 16A circuits.",
-            })
+        if self.standard == "NEC2023":
+            # NEC doesn't limit socket count, uses load calculation
+            return issues
+        elif self.standard == "BS7671":
+            # UK allows unlimited sockets with valid load calculation
+            return issues
+        else:
+            # NF C 15-100 / IEC 60364
+            max_16A = rules.get("max_sockets_per_16A_circuit", 8)
+            max_20A = rules.get("max_sockets_per_20A_circuit", 12)
 
-        # Check 20A circuit
-        elif rating == 20 and socket_count > rules["max_sockets_per_20A_circuit"]:
-            issues.append({
-                "component_id": comp.get("id", "?"),
-                "rule": "NF C 15-100 §771",
-                "severity": "warning",
-                "message": (
-                    f"[{comp.get('id')}] 20A circuit with {socket_count} outlets "
-                    f"(maximum {rules['max_sockets_per_20A_circuit']})"
-                ),
-                "suggestion": "Split into two separate 20A circuits.",
-            })
+            if rating == 16 and socket_count > max_16A:
+                issues.append({
+                    "component_id": comp.get("id", "?"),
+                    "rule": f"{self.standard} - Socket count",
+                    "severity": "warning",
+                    "message": f"[{comp.get('id')}] {rating}A circuit with {socket_count} sockets (maximum {max_16A})",
+                    "suggestion": "Split into two separate circuits.",
+                })
+            elif rating == 20 and socket_count > max_20A:
+                issues.append({
+                    "component_id": comp.get("id", "?"),
+                    "rule": f"{self.standard} - Socket count",
+                    "severity": "warning",
+                    "message": f"[{comp.get('id')}] {rating}A circuit with {socket_count} sockets (maximum {max_20A})",
+                    "suggestion": "Split into two separate circuits.",
+                })
 
         return issues

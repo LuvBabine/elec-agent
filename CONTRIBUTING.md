@@ -4,11 +4,11 @@ Thanks for your interest! Here's how to help:
 
 ## Ways to contribute
 
-- **Bug reports** — open an issue with your schematic (anonymized) and the wrong output
-- **Extend the rules database** — add rules to `nfc15100.json` with their article reference
-- **New standards** — implement `IEC60364.json` for international support
-- **New parsers** — add support for SEE Electrical, EPLAN, Autocad Electrical exports
-- **Tests** — add test cases in `tests/`
+- 🐛 **Bug reports** — open an issue with your schematic (anonymized) and the wrong output
+- 📏 **Extend the rules database** — add rules to `nfc15100.json` with their article reference
+- 🌍 **New standards** — implement `IEC60364.json` for international support
+- 🔌 **New parsers** — add support for SEE Electrical, EPLAN, Autocad Electrical exports
+- 🧪 **Tests** — add test cases in `tests/`
 
 ## Development setup
 

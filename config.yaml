@@ -1,12 +1,12 @@
 llm:
-  provider: ollama
-  model: qwen2.5vl
-  api_key: null
+  provider: ollama          # ollama | openai | anthropic
+  model: qwen2.5vl          # vision-capable model (qwen2.5vl, llava, gpt-4o)
+  api_key: null             # required for openai/anthropic
 
 rules:
-  standard: NFC15100
-  strictness: normal
+  standard: NFC15100        # NFC15100 | IEC60364 | NEC2023 | BS7671
+  strictness: normal        # normal | strict
 
 output:
-  format: pdf
-  language: fr
+  format: pdf               # pdf | txt | json
+  language: fr              # fr | en
