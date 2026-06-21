@@ -1,40 +1,27 @@
 # ⚡ elec-agent CLI
 # Usage: elec-agent analyze <schematic.png> --output rapport.pdf -v
 
-import typer
+import click
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from .agent import ElecAgent
 
-app = typer.Typer(
-    name="elec-agent",
-    help="Autonomous NF C 15-100 electrical schematic analyzer.",
-    add_completion=False,
-)
 console = Console()
 
 
+@click.group()
+def app():
+    """elec-agent — Autonomous NF C 15-100 electrical schematic analyzer."""
+    pass
+
+
 @app.command()
-def analyze(
-    schematic: str = typer.Argument(
-        help="Path to schematic image or PDF file"
-    ),
-    config: str = typer.Option(
-        "config.yaml",
-        help="Configuration file path (LLM settings, rules, output format)"
-    ),
-    output: str = typer.Option(
-        "rapport.pdf",
-        help="Output PDF report path"
-    ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Show detailed error messages"
-    ),
-):
+@click.argument("schematic", type=click.Path(exists=True))
+@click.option("--config", "-c", default="config.yaml", help="Configuration file path")
+@click.option("--output", "-o", default="rapport.pdf", help="Output PDF report path")
+@click.option("--verbose", "-v", is_flag=True, help="Show detailed error messages")
+def analyze(schematic, config, output, verbose):
     """
     Analyze an electrical schematic for NF C 15-100 compliance.
     
@@ -47,11 +34,6 @@ def analyze(
         "[bold yellow]⚡ elec-agent[/bold yellow] — NF C 15-100 Compliance Check",
         expand=False
     ))
-
-    # Validate input file exists
-    if not schematic_path.exists():
-        console.print(f"[red]Error:[/red] file not found: {schematic}")
-        raise typer.Exit(1)
 
     # Initialize agent with config
     agent = ElecAgent(config_path=Path(config), verbose=verbose)
