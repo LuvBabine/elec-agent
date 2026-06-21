@@ -18,7 +18,7 @@ console = Console()
 @app.command()
 def analyze(
     schematic: Path = typer.Argument(
-        ...,
+        None,
         help="Path to schematic image or PDF file"
     ),
     config: Path = typer.Option(
@@ -38,10 +38,14 @@ def analyze(
 ):
     """
     Analyze an electrical schematic for NF C 15-100 compliance.
-
+    
     Example:
         elec-agent analyze schema.png --output rapport.pdf -v
     """
+    if schematic is None:
+        console.print("[red]Error:[/red] Please provide a schematic file path")
+        raise typer.Exit(1)
+
     console.print(Panel(
         "[bold yellow]⚡ elec-agent[/bold yellow] — NF C 15-100 Compliance Check",
         expand=False
