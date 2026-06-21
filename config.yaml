@@ -1,6 +1,6 @@
 llm:
   provider: ollama
-  model: llava
+  model: qwen2.5vl
   api_key: null
 
 rules:
