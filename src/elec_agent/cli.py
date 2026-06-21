@@ -17,15 +17,15 @@ console = Console()
 
 @app.command()
 def analyze(
-    schematic: Path = typer.Argument(
-        None,
+    schematic: str = typer.Argument(
+        "",
         help="Path to schematic image or PDF file"
     ),
-    config: Path = typer.Option(
+    config: str = typer.Option(
         "config.yaml",
         help="Configuration file path (LLM settings, rules, output format)"
     ),
-    output: Path = typer.Option(
+    output: str = typer.Option(
         "rapport.pdf",
         help="Output PDF report path"
     ),
@@ -42,9 +42,11 @@ def analyze(
     Example:
         elec-agent analyze schema.png --output rapport.pdf -v
     """
-    if schematic is None:
+    if schematic == "":
         console.print("[red]Error:[/red] Please provide a schematic file path")
         raise typer.Exit(1)
+
+    schematic_path = Path(schematic)
 
     console.print(Panel(
         "[bold yellow]⚡ elec-agent[/bold yellow] — NF C 15-100 Compliance Check",
@@ -52,16 +54,16 @@ def analyze(
     ))
 
     # Validate input file exists
-    if not schematic.exists():
+    if not schematic_path.exists():
         console.print(f"[red]Error:[/red] file not found: {schematic}")
         raise typer.Exit(1)
 
     # Initialize agent with config
-    agent = ElecAgent(config_path=config, verbose=verbose)
+    agent = ElecAgent(config_path=Path(config), verbose=verbose)
 
     # Step 1: Extract components using vision LLM
     with console.status("[bold green]Extracting components via vision LLM...[/bold green]"):
-        components = agent.extract_components(schematic)
+        components = agent.extract_components(schematic_path)
 
     console.print(f"[green]✓[/green] {len(components)} components detected")
 
@@ -83,7 +85,7 @@ def analyze(
 
     # Step 3: Generate PDF report
     with console.status("[bold green]Generating PDF report...[/bold green]"):
-        agent.generate_report(components, issues, output)
+        agent.generate_report(components, issues, Path(output))
 
     console.print(f"[bold green]✓ Report generated:[/bold green] {output}")
 
