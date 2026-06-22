@@ -216,4 +216,9 @@ class ImageParser:
         # Find JSON object in response (LLM may add chatter)
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         if not match:
-            raise ValueError(f"LLM did not return valid JSON.")
+            raise ValueError(
+                f"LLM did not return valid JSON.\nRaw output:\n{raw}"
+            )
+
+        data = json.loads(match.group())
+        return data.get("components", [])

@@ -14,7 +14,8 @@ from elec_agent.rules.engine import RuleEngine
 
 @pytest.fixture
 def engine():
-    return RuleEngine({"strictness": "normal"})
+    # BUG FIX: "standard" key was missing → caused get_norm(None) → returned None → crash
+    return RuleEngine({"standard": "NFC15100", "strictness": "normal"})
 
 
 # ── Voltage drop tests ─────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ def test_breaker_cable_undersized(engine):
     issues = engine._check_breaker_cable(comp)
     assert len(issues) == 1
     assert issues[0]["severity"] == "error"
+    # BUG FIX: rule string is "NFC15100 §523 - Cable coordination", not just "§523"
     assert "§523" in issues[0]["rule"]
 
 

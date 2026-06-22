@@ -83,7 +83,7 @@ class RuleEngine:
         if min_section and section < min_section:
             issues.append({
                 "component_id": comp.get("id", "?"),
-                "rule": f"{self.standard} - Cable coordination",
+                "rule": f"{self.standard} §523 - Cable coordination",
                 "severity": "error",
                 "message": (
                     f"[{comp.get('id')}] {rating}A breaker: cable section {section}mm^2 too small "
@@ -102,7 +102,7 @@ class RuleEngine:
             rules = self.rules.get("gfci_protection", {})
             protection_type = "GFCI"
         else:
-            rules = self.rules.get("differential_protection", {})
+            rules = self.rules.get("differential_protection") or self.rules.get("rcd_protection", {})
             protection_type = "differential" if self.standard != "BS7671" else "RCD"
 
         protected_types = rules.get("mandatory_for", [])
@@ -114,7 +114,7 @@ class RuleEngine:
 
         if self.standard == "NEC2023":
             has_protection = any(
-                c.get("type") in ("gfci", "afc") and c.get("position") == position
+                c.get("type") in ("gfci", "afci") and c.get("position") == position  # BUG FIX: "afc" → "afci"
                 for c in all_comps
             )
         else:

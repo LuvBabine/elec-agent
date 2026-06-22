@@ -70,3 +70,6 @@ NEC_2023_RULES = {
         "nominal_voltage_V": 120
     }
 }
+
+# Alias for consistent naming
+NEC2023_RULES = NEC_2023_RULES
