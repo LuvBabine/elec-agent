@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 from .agent import ElecAgent
 
+# Main app with invoke_without_command=True so bare "elec-agent" still shows help
 app = typer.Typer(
     name="elec-agent",
     help="Autonomous NF C 15-100 electrical schematic analyzer.",
@@ -15,7 +16,7 @@ app = typer.Typer(
 console = Console()
 
 
-@app.command()
+@app.command("analyze")
 def analyze(
     schematic: Path = typer.Argument(
         ...,
